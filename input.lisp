@@ -165,6 +165,7 @@
      (apply 'input-handle-selection-event event-slots))
     (t nil)))
 
+<<<<<<< HEAD
 (defun read-key-or-click-handle-event (&rest event-slots &key event-key &allow-other-keys)
   (case event-key
     ((or :key-release :key-press)
@@ -197,6 +198,24 @@
            (return (values nil (rest ev) nil nil)))
          (when (eq (first ev) :button-press)
            (return (values t nil (second ev) (third ev)))))))
+=======
+(defun read-key (&optional timeout)
+  "Return a dotted pair (code . state) key."
+  (declare (type (or null fixnum) timeout))
+  (let ((start (if timeout (get-universal-time))))
+    (loop for ev = (xlib:process-event *display* :handler #'read-key-handle-event :timeout timeout) do
+
+         (if (and (consp ev)
+                  (eq (first ev) :key-press))
+             (return (cdr ev))
+             (when (and timeout
+                        (numberp timeout))
+               (setq timeout
+                     (- timeout
+                        (- (get-universal-time) start)))
+               (when (<= timeout 0)
+                   (return nil)))))))
+>>>>>>> Timing out Grabed Pointer
 
 (defun read-key-no-modifiers (&optional timeout)
   "Like read-key but never returns a modifier key."
@@ -213,6 +232,7 @@
                     (- (get-universal-time) start)))
            (when (<= timeout 0)
                (return nil))))))
+<<<<<<< HEAD
 
 (defun read-key-no-modifiers-or-click ()
   (loop
@@ -222,6 +242,8 @@
            (return (values t nil x y))
            (unless (is-modifier (car k))
              (return (values nil k nil nil)))))))
+=======
+>>>>>>> Timing out Grabed Pointer
 
 (defun read-key-or-selection ()
   (loop for ev = (xlib:process-event *display* :handler #'read-key-or-selection-handle-event :timeout nil) do
