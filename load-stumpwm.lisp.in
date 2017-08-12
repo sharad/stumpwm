@@ -4,6 +4,9 @@
 (error "This lisp implementation is not supported.")
 
 (require 'asdf)
+(require 'in.net.sharad.utils)
+(require 'sheeple)
+(require 'in.net.sharad.pa-frontend-stumpwm)
 
 (asdf:initialize-source-registry
  '(:source-registry
