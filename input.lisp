@@ -94,7 +94,7 @@
   "Do not add a command to the input history if it's already the first in the list.")
 (defvar *numpad-map* '((87 10 . 16) (88  11 . 16) (89 12 . 16) (106 61 . 16)
                        (83 13 . 16) (84  14 . 16) (85 15 . 16) (86  21 . 17)
-                       (79 16 . 16) (80  17 . 16) (81 18 . 16) (63  17 . 17) 
+                       (79 16 . 16) (80  17 . 16) (81 18 . 16) (63  17 . 17)
                        (82 20 . 16) (104 36 . 16) (91 60 . 16) (90  19 . 16))
   "A keycode to keycode map to re-wire numpads when the numlock key is active")
 
@@ -124,15 +124,15 @@
     ;; Draw the prompt
     (draw-input-bucket screen prompt input)
     ;; Ready to recieve input
-    
+
 ))
 
 (defun shutdown-input-window (screen)
   (xlib:ungrab-keyboard *display*)
   (xlib:unmap-window (screen-input-window screen)))
 ;; Hack to avoid clobbering input from numpads with numlock on.
-(defun input-handle-key-press-event (&rest event-slots 
-                                     &key event-key root code state 
+(defun input-handle-key-press-event (&rest event-slots
+                                     &key event-key root code state
                                        &allow-other-keys)
   (declare (ignore event-slots root))
   (let ((numlock-on-p (= 2 (logand 2 (nth-value 4 (xlib:keyboard-control *display*)))))
@@ -164,18 +164,38 @@
      (apply 'input-handle-selection-event event-slots))
     (t nil)))
 
-(defun read-key ()
+(defun read-key (&optional timeout)
   "Return a dotted pair (code . state) key."
-  (loop for ev = (xlib:process-event *display* :handler #'read-key-handle-event :timeout nil) do
-       (when (and (consp ev)
-                  (eq (first ev) :key-press))
-           (return (rest ev)))))
+  (declare (type (or null fixnum) timeout))
+  (let ((start (if timeout (get-universal-time))))
+    (loop for ev = (xlib:process-event *display* :handler #'read-key-handle-event :timeout timeout) do
 
-(defun read-key-no-modifiers ()
+         (if (and (consp ev)
+                  (eq (first ev) :key-press))
+             (return (cdr ev))
+             (when (and timeout
+                        (numberp timeout))
+               (setq timeout
+                     (- timeout
+                        (- (get-universal-time) start)))
+               (when (<= timeout 0)
+                   (return nil)))))))
+
+(defun read-key-no-modifiers (&optional timeout)
   "Like read-key but never returns a modifier key."
-  (loop for k = (read-key)
-       while (is-modifier (car k))
-       finally (return k)))
+  (declare (type (or null fixnum) timeout))
+  (dformat 1 "read-key-no-modifiers: ~a~%" timeout)
+  (let ((start (if timeout (get-universal-time))))
+    (loop for k = (read-key timeout)
+       while (and k (is-modifier (car k)))
+       finally (return k) do
+         (when (and timeout
+                    (numberp timeout))
+           (setq timeout
+                 (- timeout
+                    (- (get-universal-time) start)))
+           (when (<= timeout 0)
+               (return nil))))))
 
 (defun read-key-or-selection ()
   (loop for ev = (xlib:process-event *display* :handler #'read-key-or-selection-handle-event :timeout nil) do
